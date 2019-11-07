@@ -100,7 +100,7 @@ class JsonSchemaViewerController extends AbstractController
                     }
                     if ($args['view'] === self::JSON_VIEW) {
                         $contentType = 'application/json';
-                        $content = $json;
+                        $content = $this->makeJsonRefPaths($request, $json);
                     }
                 } else {
                     throw new NotFoundException($request, $response);
@@ -117,6 +117,34 @@ class JsonSchemaViewerController extends AbstractController
             $response = $response->withStatus(200)->write($content);
         }
         return $response;
+    }
+
+    private function makeJsonRefPaths(Request $request, string $json): string
+    {
+        # Append base URI to all $ref paths
+        # Disabled for now
+        if (false) {
+            $baseUri = $request->getUri()->getScheme() . '://' .
+                        $request->getUri()->getHost() .
+                        $this->router->pathFor(self::SCHEMAS_LIST_NAMED_ROUTE) . '/' .
+                        self::JSON_VIEW;
+
+            preg_match_all('/\"\$ref\".?:.?\"(.*)\.json/', $json, $matches);
+
+            if (count($matches) > 0 && is_array($matches[0])) {
+                $i = 0;
+                foreach ($matches[0] as $wholeMatch) {
+                    $findInWholeMatch = $matches[1][$i];
+                    $replacementInWholeMatch = $baseUri . '/' . $findInWholeMatch;
+                    $replacementinJson = str_replace($findInWholeMatch, $replacementInWholeMatch, $wholeMatch);
+                    $json = str_replace($wholeMatch, $replacementinJson, $json);
+                    $i++;
+                }
+            }
+            return $json;
+        } else {
+            return $json;
+        }
     }
 
     private function makeFileListHtml(string $baseUri): string
